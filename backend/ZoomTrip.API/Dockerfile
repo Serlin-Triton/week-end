@@ -1,16 +1,20 @@
-# Build stage
+# =========================
+# Dockerfile for ZoomTrip.API
+# =========================
+
+# 1️⃣ Build stage
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
 # Copy the csproj and restore dependencies
-COPY ZoomTrip.csproj ./        # <-- already in backend folder
+COPY ZoomTrip.API.csproj ./
 RUN dotnet restore
 
 # Copy the rest of the project files
-COPY . ./                      # copy everything else
+COPY . ./
 RUN dotnet publish -c Release -o /app/publish
 
-# Runtime stage
+# 2️⃣ Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 
@@ -18,4 +22,4 @@ WORKDIR /app
 COPY --from=build /app/publish .
 
 # Run the app
-ENTRYPOINT ["dotnet", "ZoomTrip.dll"]
+ENTRYPOINT ["dotnet", "ZoomTrip.API.dll"]
