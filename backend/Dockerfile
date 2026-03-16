@@ -3,11 +3,11 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
 # Copy the csproj and restore dependencies
-COPY *.csproj ./
+COPY ZoomTrip.csproj ./        # <-- already in backend folder
 RUN dotnet restore
 
 # Copy the rest of the project files
-COPY . ./
+COPY . ./                      # copy everything else
 RUN dotnet publish -c Release -o /app/publish
 
 # Runtime stage
