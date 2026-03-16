@@ -1,0 +1,16 @@
+# Visual Studio
+.vs/
+bin/
+obj/
+
+# Node
+node_modules/
+
+# User files
+*.user
+*.suo
+*.log
+
+# Build
+dist/
+build/

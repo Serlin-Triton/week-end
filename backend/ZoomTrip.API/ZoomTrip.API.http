@@ -1,0 +1,6 @@
+@ZoomTrip.API_HostAddress = http://localhost:5165
+
+GET {{ZoomTrip.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
