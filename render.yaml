@@ -1,14 +1,7 @@
-services:
-  - type: web
-    name: zoomtrip-backend
-    runtime: docker # Inga 'dotnet' thookitu 'docker' nu mathirukkom
-    plan: free
-    rootDir: backend
-
-  - type: web
+- type: web
     name: zoomtrip-frontend
     runtime: node
     plan: free
     rootDir: frontend
     buildCommand: npm install && npm run build
-    startCommand: npm run start
+    startCommand: npm run preview  # "npm start"-ku pathila "npm run preview"
