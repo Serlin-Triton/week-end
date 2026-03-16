@@ -1,17 +1,21 @@
+# Build stage
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# Copy csproj first and restore
-COPY ZoomTrip/*.csproj ./
+# Copy the csproj and restore dependencies
+COPY *.csproj ./
 RUN dotnet restore
 
-# Copy everything else and publish
-COPY ZoomTrip/. ./
+# Copy the rest of the project files
+COPY . ./
 RUN dotnet publish -c Release -o /app/publish
 
-# Final runtime image
+# Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
+
+# Copy published files from build stage
 COPY --from=build /app/publish .
 
+# Run the app
 ENTRYPOINT ["dotnet", "ZoomTrip.dll"]
