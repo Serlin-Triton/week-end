@@ -1,11 +1,9 @@
 services:
   - type: web
     name: zoomtrip-backend
-    runtime: dotnet
+    runtime: docker # Inga 'dotnet' thookitu 'docker' nu mathirukkom
     plan: free
     rootDir: backend
-    buildCommand: dotnet publish -c Release -o out
-    startCommand: dotnet out/ZoomTrip.dll
 
   - type: web
     name: zoomtrip-frontend
@@ -13,4 +11,4 @@ services:
     plan: free
     rootDir: frontend
     buildCommand: npm install && npm run build
-    startCommand: npm start
+    startCommand: npm run start
