@@ -73,20 +73,26 @@ using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-    // Ensure database & tables created
-    dbContext.Database.Migrate();
-
-    if (!dbContext.Users.Any())
+    try
     {
-        dbContext.Users.Add(new ZoomTrip.API.Models.User
-        {
-            Name = "Admin Account",
-            MobileNumber = "1234567890",
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin123"),
-            Role = "Admin"
-        });
+        dbContext.Database.Migrate();
 
-        dbContext.SaveChanges();
+        if (!dbContext.Users.Any())
+        {
+            dbContext.Users.Add(new ZoomTrip.API.Models.User
+            {
+                Name = "Admin Account",
+                MobileNumber = "1234567890",
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin123"),
+                Role = "Admin"
+            });
+
+            dbContext.SaveChanges();
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine("Database Error: " + ex.Message);
     }
 }
 app.Run();
