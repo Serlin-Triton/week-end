@@ -82,8 +82,8 @@ using (var scope = app.Services.CreateScope())
             dbContext.Users.Add(new ZoomTrip.API.Models.User
             {
                 Name = "Admin Account",
-                MobileNumber = "1234567890",
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin123"),
+                MobileNumber = "8428220802",
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword("mathan@302"),
                 Role = "Admin"
             });
 
