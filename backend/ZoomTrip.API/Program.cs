@@ -69,9 +69,13 @@ app.UseAuthorization();
 app.MapControllers();
 
 // Seed Admin user
-using (var scope = app.Services.CreateScope())
+uusing (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+    // Ensure database & tables created
+    dbContext.Database.Migrate();
+
     if (!dbContext.Users.Any())
     {
         dbContext.Users.Add(new ZoomTrip.API.Models.User
@@ -81,6 +85,7 @@ using (var scope = app.Services.CreateScope())
             PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin123"),
             Role = "Admin"
         });
+
         dbContext.SaveChanges();
     }
 }
