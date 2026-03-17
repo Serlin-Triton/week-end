@@ -95,31 +95,18 @@ app.MapControllers();
 app.MapGet("/", () => "ZoomTrip API Running Successfully 🚀");
 
 
-// Seed Admin user
+// Auto-apply database migrations
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
     try
     {
         dbContext.Database.Migrate();
-
-        if (!dbContext.Users.Any())
-        {
-            dbContext.Users.Add(new ZoomTrip.API.Models.User
-            {
-                Name = "Admin Account",
-                MobileNumber = "8428220802",
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword("mathan@302"),
-                Role = "Admin"
-            });
-
-            dbContext.SaveChanges();
-        }
     }
     catch (Exception ex)
     {
         Console.WriteLine("Database Error: " + ex.Message);
     }
 }
+
 app.Run();

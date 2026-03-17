@@ -22,6 +22,56 @@ namespace ZoomTrip.API.Controllers
             _configuration = configuration;
         }
 
+        [HttpPost("register")]
+        public async Task<IActionResult> Register([FromBody] RegisterRequest request)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(request.Name) || 
+                    string.IsNullOrWhiteSpace(request.MobileNumber) || 
+                    string.IsNullOrWhiteSpace(request.Password))
+                {
+                    return BadRequest(new { message = "Name, Mobile Number, and Password are required." });
+                }
+
+                var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.MobileNumber == request.MobileNumber);
+                if (existingUser != null)
+                {
+                    return BadRequest(new { message = "User with this mobile number already exists." });
+                }
+
+                var newUser = new Models.User
+                {
+                    Name = request.Name,
+                    MobileNumber = request.MobileNumber,
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+                    Role = "Staff" // Default role
+                };
+
+                _context.Users.Add(newUser);
+                await _context.SaveChangesAsync();
+
+                var token = GenerateJwtToken(newUser);
+
+                return Ok(new AuthResponse
+                {
+                    Token = token,
+                    User = new UserDto
+                    {
+                        Id = newUser.Id,
+                        Name = newUser.Name,
+                        MobileNumber = newUser.MobileNumber,
+                        Role = newUser.Role,
+                        PhotoUrl = newUser.PhotoUrl
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Internal server error during registration", error = ex.Message });
+            }
+        }
+
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
@@ -129,6 +179,13 @@ namespace ZoomTrip.API.Controllers
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
+    }
+
+    public class RegisterRequest
+    {
+        public string Name { get; set; } = string.Empty;
+        public string MobileNumber { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
     }
 
     public class LoginRequest
