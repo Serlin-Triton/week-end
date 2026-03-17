@@ -16,7 +16,7 @@ builder.Services.AddControllers().AddJsonOptions(options =>
 {
     options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
 });
-builder.Services.AddOpenApi();
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -36,11 +36,13 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             ValidIssuer = jwtSettings["Issuer"],
             ValidAudience = jwtSettings["Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"]!))
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(jwtSettings["Key"]!))
         };
     });
 
 builder.Services.AddAuthorization();
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -57,7 +59,6 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-    app.MapOpenApi();
 }
 
 app.UseHttpsRedirection();
@@ -67,18 +68,18 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-// Optional: Seed Admin user
+// Seed Admin user
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     if (!dbContext.Users.Any())
     {
-        dbContext.Users.Add(new ZoomTrip.API.Models.User 
-        { 
-            Name = "Admin Account", 
-            MobileNumber = "1234567890", 
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin123"), 
-            Role = "Admin" 
+        dbContext.Users.Add(new ZoomTrip.API.Models.User
+        {
+            Name = "Admin Account",
+            MobileNumber = "1234567890",
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin123"),
+            Role = "Admin"
         });
         dbContext.SaveChanges();
     }
