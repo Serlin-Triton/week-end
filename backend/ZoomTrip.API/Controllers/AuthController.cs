@@ -25,44 +25,77 @@ namespace ZoomTrip.API.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.MobileNumber == request.MobileNumber);
-            
-            if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+            try
             {
-                return Unauthorized(new { message = "Invalid mobile number or password" });
-            }
-
-            var token = GenerateJwtToken(user);
-
-            return Ok(new AuthResponse
-            {
-                Token = token,
-                User = new UserDto
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.MobileNumber == request.MobileNumber);
+                
+                bool isPasswordValid = false;
+                if (user != null && !string.IsNullOrEmpty(user.PasswordHash))
                 {
-                    Id = user.Id,
-                    Name = user.Name,
-                    MobileNumber = user.MobileNumber,
-                    Role = user.Role,
-                    PhotoUrl = user.PhotoUrl
+                    try
+                    {
+                        isPasswordValid = BCrypt.Net.BCrypt.Verify(request.Password ?? "", user.PasswordHash);
+                    }
+                    catch (Exception)
+                    {
+                        // In case the hash in DB is invalid (e.g. plain text or corrupted), consider it invalid
+                        isPasswordValid = false;
+                    }
                 }
-            });
+
+                if (user == null || !isPasswordValid)
+                {
+                    return Unauthorized(new { message = "Invalid mobile number or password" });
+                }
+
+                var token = GenerateJwtToken(user);
+
+                return Ok(new AuthResponse
+                {
+                    Token = token,
+                    User = new UserDto
+                    {
+                        Id = user.Id,
+                        Name = user.Name,
+                        MobileNumber = user.MobileNumber,
+                        Role = user.Role,
+                        PhotoUrl = user.PhotoUrl
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Internal server error during login", error = ex.Message });
+            }
         }
 
         [HttpPost("forgot-password")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.MobileNumber == request.MobileNumber);
-            if (user == null)
+            try
             {
-                // To prevent enumeration attacks, we'll return ok even if user doesn't exist
-                return Ok(new { message = "If the mobile number exists, instructions have been sent." });
+                if (string.IsNullOrEmpty(request.NewPassword))
+                {
+                    return BadRequest(new { message = "New password is required" });
+                }
+
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.MobileNumber == request.MobileNumber);
+                if (user == null)
+                {
+                    // To prevent enumeration attacks, we'll return ok even if user doesn't exist
+                    return Ok(new { message = "If the mobile number exists, instructions have been sent." });
+                }
+
+                // Direct reset for this project
+                user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+                await _context.SaveChangesAsync();
+
+                return Ok(new { message = "Password has been reset successfully." });
             }
-
-            // Direct reset for this project
-            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "Password has been reset successfully." });
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Internal server error during password reset", error = ex.Message });
+            }
         }
 
         private string GenerateJwtToken(Models.User user)
