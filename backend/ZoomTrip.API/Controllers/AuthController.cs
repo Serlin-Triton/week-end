@@ -124,19 +124,42 @@ namespace ZoomTrip.API.Controllers
         {
             try
             {
-                if (string.IsNullOrEmpty(request.NewPassword))
+                if (string.IsNullOrEmpty(request.MobileNumber))
                 {
-                    return BadRequest(new { message = "New password is required" });
+                    return BadRequest(new { message = "Mobile number is required" });
                 }
 
                 var user = await _context.Users.FirstOrDefaultAsync(u => u.MobileNumber == request.MobileNumber);
                 if (user == null)
                 {
                     // To prevent enumeration attacks, we'll return ok even if user doesn't exist
-                    return Ok(new { message = "If the mobile number exists, instructions have been sent." });
+                    return Ok(new { message = "If the mobile number exists, you can proceed to reset.", success = true });
                 }
 
-                // Direct reset for this project
+                return Ok(new { message = "Mobile number verified.", success = true });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Internal server error during forgot password", error = ex.Message });
+            }
+        }
+
+        [HttpPut("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(request.MobileNumber) || string.IsNullOrEmpty(request.NewPassword))
+                {
+                    return BadRequest(new { message = "Mobile number and New password are required" });
+                }
+
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.MobileNumber == request.MobileNumber);
+                if (user == null)
+                {
+                    return BadRequest(new { message = "User not found." });
+                }
+
                 user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
                 await _context.SaveChangesAsync();
 
@@ -195,6 +218,11 @@ namespace ZoomTrip.API.Controllers
     }
 
     public class ForgotPasswordRequest
+    {
+        public string MobileNumber { get; set; } = string.Empty;
+    }
+
+    public class ResetPasswordRequest
     {
         public string MobileNumber { get; set; } = string.Empty;
         public string NewPassword { get; set; } = string.Empty;

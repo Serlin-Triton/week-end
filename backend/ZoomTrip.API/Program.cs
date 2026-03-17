@@ -18,7 +18,33 @@ builder.Services.AddControllers().AddJsonOptions(options =>
 });
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo { Title = "ZoomTrip API", Version = "v1" });
+    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Description = "Enter your valid token. Example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'"
+    });
+    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] {}
+        }
+    });
+});
 
 // Configure Entity Framework and PostgreSQL
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -29,14 +55,9 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("ProductionCors", policy =>
     {
-        policy.WithOrigins(
-                "https://zoomtrip-frontend.onrender.com", // Production Frontend
-                "http://localhost:5173",                  // Local Development
-                "http://localhost:3000"
-              )
+        policy.AllowAnyOrigin()
               .AllowAnyMethod()
-              .AllowAnyHeader()
-              .AllowCredentials(); // Allows sending authorization headers/cookies securely
+              .AllowAnyHeader();
     });
 });
 
