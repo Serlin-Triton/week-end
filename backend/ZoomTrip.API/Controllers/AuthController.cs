@@ -100,8 +100,16 @@ namespace ZoomTrip.API.Controllers
 
         private string GenerateJwtToken(Models.User user)
         {
-            var jwtSettings = _configuration.GetSection("Jwt");
-            var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]!);
+            var jwtKey = _configuration["Jwt:Key"] ?? Environment.GetEnvironmentVariable("JWT_KEY");
+            var jwtIssuer = _configuration["Jwt:Issuer"] ?? Environment.GetEnvironmentVariable("JWT_ISSUER");
+            var jwtAudience = _configuration["Jwt:Audience"] ?? Environment.GetEnvironmentVariable("JWT_AUDIENCE");
+
+            if (string.IsNullOrEmpty(jwtKey))
+            {
+                throw new Exception("JWT Secret Key is missing.");
+            }
+
+            var key = Encoding.UTF8.GetBytes(jwtKey);
 
             var claims = new List<Claim>
             {
@@ -112,8 +120,8 @@ namespace ZoomTrip.API.Controllers
             };
 
             var token = new JwtSecurityToken(
-                issuer: jwtSettings["Issuer"],
-                audience: jwtSettings["Audience"],
+                issuer: jwtIssuer ?? "ZoomTripAPI",
+                audience: jwtAudience ?? "ZoomTripApp",
                 claims: claims,
                 expires: DateTime.UtcNow.AddMinutes(120),
                 signingCredentials: new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256)

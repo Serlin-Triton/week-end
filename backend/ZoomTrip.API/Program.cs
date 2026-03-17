@@ -7,11 +7,11 @@ using ZoomTrip.API.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Handle Render dynamic port
+// Handle WebHost port (for Render dynamic port binding)
 var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
 builder.WebHost.UseUrls($"http://*:{port}");
 
-// Add services
+// Add controllers
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
     options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
@@ -20,16 +20,34 @@ builder.Services.AddControllers().AddJsonOptions(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Configure Entity Framework and PostgreSQL
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// JWT Authentication
-var jwtSettings = builder.Configuration.GetSection("Jwt");
-
-var key = jwtSettings["Key"];
-if (string.IsNullOrEmpty(key))
+// CORS Configuration - Production Ready
+builder.Services.AddCors(options =>
 {
-    throw new Exception("JWT Key missing in configuration");
+    options.AddPolicy("ProductionCors", policy =>
+    {
+        policy.WithOrigins(
+                "https://zoomtrip-frontend.onrender.com", // Production Frontend
+                "http://localhost:5173",                  // Local Development
+                "http://localhost:3000"
+              )
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials(); // Allows sending authorization headers/cookies securely
+    });
+});
+
+// JWT Authentication Configuration
+var jwtKey = builder.Configuration["Jwt:Key"] ?? Environment.GetEnvironmentVariable("JWT_KEY");
+var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? Environment.GetEnvironmentVariable("JWT_ISSUER");
+var jwtAudience = builder.Configuration["Jwt:Audience"] ?? Environment.GetEnvironmentVariable("JWT_AUDIENCE");
+
+if (string.IsNullOrEmpty(jwtKey))
+{
+    throw new Exception("JWT Secret Key is missing. Ensure 'Jwt:Key' is set in appsettings.json or 'JWT_KEY' environment variable is configured in Render.");
 }
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -41,34 +59,37 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         ValidateAudience = true,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
-        ValidIssuer = jwtSettings["Issuer"],
-        ValidAudience = jwtSettings["Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(key))
+        ValidIssuer = jwtIssuer ?? "ZoomTripAPI",
+        ValidAudience = jwtAudience ?? "ZoomTripApp",
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
     };
 });
 builder.Services.AddAuthorization();
 
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowAll", policy =>
-    {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
-    });
-});
-
 var app = builder.Build();
 
-app.UseSwagger();
-app.UseSwaggerUI();
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+else 
+{
+    // Usually Swagger is hidden in prod, but if you want it visible on Render:
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
-app.UseCors("AllowAll");
+
+// WARNING: UseCors MUST be placed BEFORE UseAuthentication and UseAuthorization
+app.UseCors("ProductionCors");
+
 app.UseAuthentication();
 app.UseAuthorization();
+
 app.MapControllers();
 
 app.MapGet("/", () => "ZoomTrip API Running Successfully 🚀");
