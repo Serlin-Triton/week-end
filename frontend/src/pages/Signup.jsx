@@ -1,30 +1,34 @@
 import React, { useState } from 'react';
-import { useDispatch } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
-import { loginSuccess } from '../store/slices/authSlice';
 import api from '../services/api';
-import { CarFront, Lock, Phone } from 'lucide-react';
+import { CarFront, Lock, Phone, User as UserIcon } from 'lucide-react';
 
-const Login = () => {
+const Signup = () => {
+    const [name, setName] = useState('');
     const [mobileNumber, setMobileNumber] = useState('');
     const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     
-    const dispatch = useDispatch();
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setIsLoading(true);
         setError('');
+
+        if (password !== confirmPassword) {
+            setError("Passwords do not match");
+            return;
+        }
+
+        setIsLoading(true);
         
         try {
-            const response = await api.post('/auth/login', { mobileNumber, password });
-            dispatch(loginSuccess(response.data));
-            navigate('/');
+            await api.post('/auth/register', { name, mobileNumber, password });
+            navigate('/login', { state: { message: "Account created successfully. Please login." } });
         } catch (err) {
-            setError(err.response?.data?.message || 'Invalid credentials or server error.');
+            setError(err.response?.data?.message || 'Registration failed or server error.');
         } finally {
             setIsLoading(false);
         }
@@ -38,12 +42,27 @@ const Login = () => {
                         <CarFront size={32} color="var(--primary)" />
                     </div>
                     <h2 style={styles.title}>Welcome to ZoomTrip</h2>
-                    <p style={styles.subtitle}>Sign in to manage your travels</p>
+                    <p style={styles.subtitle}>Create an account to manage your travels</p>
                 </div>
                 
                 {error && <div style={styles.error} className="badge badge-danger">{error}</div>}
                 
                 <form onSubmit={handleSubmit} style={styles.form}>
+                    <div style={styles.inputGroup}>
+                        <label>Full Name</label>
+                        <div style={styles.inputWrapper}>
+                            <UserIcon size={18} style={styles.inputIcon} />
+                            <input 
+                                type="text" 
+                                placeholder="Enter full name" 
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                style={styles.inputWithIcon}
+                                required 
+                            />
+                        </div>
+                    </div>
+
                     <div style={styles.inputGroup}>
                         <label>Mobile Number</label>
                         <div style={styles.inputWrapper}>
@@ -73,17 +92,28 @@ const Login = () => {
                             />
                         </div>
                     </div>
-                    
-                    <div style={styles.options}>
-                        <Link to="/forgot-password" style={styles.forgotLink}>Forgot password?</Link>
+
+                    <div style={styles.inputGroup}>
+                        <label>Confirm Password</label>
+                        <div style={styles.inputWrapper}>
+                            <Lock size={18} style={styles.inputIcon} />
+                            <input 
+                                type="password" 
+                                placeholder="Confirm password" 
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                style={styles.inputWithIcon}
+                                required 
+                            />
+                        </div>
                     </div>
                     
                     <button type="submit" className="btn btn-primary" style={styles.submitBtn} disabled={isLoading}>
-                        {isLoading ? 'Signing in...' : 'Sign In'}
+                        {isLoading ? 'Creating account...' : 'Sign Up'}
                     </button>
 
-                    <div style={{...styles.options, justifyContent: 'center', marginTop: '10px'}}>
-                        <span style={styles.signupText}>Don't have an account? <Link to="/signup" style={styles.signupLink}>Sign Up</Link></span>
+                    <div style={styles.options}>
+                        <span style={styles.signupText}>Already have an account? <Link to="/login" style={styles.signupLink}>Login</Link></span>
                     </div>
                 </form>
             </div>
@@ -150,11 +180,17 @@ const styles = {
     },
     options: {
         display: 'flex',
-        justifyContent: 'flex-end',
-        fontSize: '14px'
+        justifyContent: 'center',
+        fontSize: '14px',
+        marginTop: '10px'
     },
-    forgotLink: {
-        fontWeight: '500'
+    signupText: {
+        color: 'var(--text-muted)'
+    },
+    signupLink: {
+        fontWeight: '500',
+        color: 'var(--primary)',
+        textDecoration: 'none'
     },
     submitBtn: {
         width: '100%',
@@ -169,4 +205,4 @@ const styles = {
     }
 };
 
-export default Login;
+export default Signup;

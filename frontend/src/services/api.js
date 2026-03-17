@@ -1,7 +1,12 @@
 import axios from 'axios';
 
+const isDevelopment = import.meta.env.MODE === 'development';
+const API_URL = isDevelopment 
+  ? 'http://localhost:5000/api' // Matches local backend port 
+  : 'https://zoomtrip-backend.onrender.com/api'; // Render production backend URL
+
 const api = axios.create({
-    baseURL: 'http://localhost:5165/api' // Using HTTP port to avoid local self-signed certificate issues
+    baseURL: API_URL
 });
 
 api.interceptors.request.use(
