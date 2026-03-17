@@ -69,7 +69,7 @@ app.UseAuthorization();
 app.MapControllers();
 
 // Seed Admin user
-uusing (var scope = app.Services.CreateScope())
+using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
@@ -89,5 +89,4 @@ uusing (var scope = app.Services.CreateScope())
         dbContext.SaveChanges();
     }
 }
-
 app.Run();
