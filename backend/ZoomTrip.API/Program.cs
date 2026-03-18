@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using ZoomTrip.API.Data;
+using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -47,8 +48,28 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 // Configure Entity Framework and PostgreSQL
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? Environment.GetEnvironmentVariable("DATABASE_URL");
+
+// Support for Render's Postgres URL format: postgres://user:pass@host/db
+if (!string.IsNullOrEmpty(connectionString) && connectionString.StartsWith("postgres://"))
+{
+    var uri = new Uri(connectionString);
+    var userInfo = uri.UserInfo.Split(':');
+    var builderForNpgsql = new NpgsqlConnectionStringBuilder
+    {
+        Host = uri.Host,
+        Port = uri.Port,
+        Database = uri.AbsolutePath.Trim('/'),
+        Username = userInfo[0],
+        Password = userInfo.Length > 1 ? userInfo[1] : "",
+        SslMode = SslMode.Require,
+        TrustServerCertificate = true
+    };
+    connectionString = builderForNpgsql.ToString();
+}
+
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(connectionString));
 
 // CORS Configuration - Production Ready
 builder.Services.AddCors(options =>
@@ -94,12 +115,30 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+    app.UseDeveloperExceptionPage();
 }
 else 
 {
-    // Usually Swagger is hidden in prod, but if you want it visible on Render:
     app.UseSwagger();
     app.UseSwaggerUI();
+    // Use problem details for 500 errors in production so it doesn't just show a blank page
+    app.UseExceptionHandler(errorApp =>
+    {
+        errorApp.Run(async context =>
+        {
+            context.Response.StatusCode = 500;
+            context.Response.ContentType = "application/json";
+            
+            var exceptionHandlerPathFeature = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerPathFeature>();
+            var exception = exceptionHandlerPathFeature?.Error;
+            
+            // Return JSON error response gracefully
+            await context.Response.WriteAsJsonAsync(new { 
+                message = "An unexpected error occurred in the API.", 
+                error = exception?.Message // Be careful exposing full stack trace based on security 
+            });
+        });
+    });
 }
 
 app.UseHttpsRedirection();
@@ -117,16 +156,22 @@ app.MapGet("/", () => "ZoomTrip API Running Successfully 🚀");
 
 
 // Auto-apply database migrations
-using (var scope = app.Services.CreateScope())
+try
 {
-    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    try
+    using (var scope = app.Services.CreateScope())
     {
+        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        Console.WriteLine("Applying pending database migrations...");
         dbContext.Database.Migrate();
+        Console.WriteLine("Database migrations applied successfully.");
     }
-    catch (Exception ex)
+}
+catch (Exception ex)
+{
+    Console.WriteLine("CRITICAL Database Error during startup: " + ex.Message);
+    if (ex.InnerException != null)
     {
-        Console.WriteLine("Database Error: " + ex.Message);
+        Console.WriteLine("Inner Error: " + ex.InnerException.Message);
     }
 }
 
