@@ -48,7 +48,9 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 // Configure Entity Framework and PostgreSQL
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? Environment.GetEnvironmentVariable("DATABASE_URL");
+var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL") 
+                       ?? Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection") 
+                       ?? builder.Configuration.GetConnectionString("DefaultConnection");
 
 // Support for Render's Postgres URL format: postgres://user:pass@host/db
 if (!string.IsNullOrEmpty(connectionString) && connectionString.StartsWith("postgres://"))
@@ -83,9 +85,12 @@ builder.Services.AddCors(options =>
 });
 
 // JWT Authentication Configuration
-var jwtKey = builder.Configuration["Jwt:Key"] ?? Environment.GetEnvironmentVariable("JWT_KEY");
-var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? Environment.GetEnvironmentVariable("JWT_ISSUER");
-var jwtAudience = builder.Configuration["Jwt:Audience"] ?? Environment.GetEnvironmentVariable("JWT_AUDIENCE");
+var jwtKey = Environment.GetEnvironmentVariable("JWT_KEY") 
+             ?? builder.Configuration["Jwt:Key"];
+var jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER") 
+                ?? builder.Configuration["Jwt:Issuer"];
+var jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") 
+                  ?? builder.Configuration["Jwt:Audience"];
 
 if (string.IsNullOrEmpty(jwtKey))
 {
